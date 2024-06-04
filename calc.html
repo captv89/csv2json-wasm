@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go WebAssembly Calculator</title>
+</head>
+
+<body>
+    <h1>Go WebAssembly Calculator</h1>
+    <!-- 
+        The wasm_exec.js must come before our Javascript (index.js), 
+        as it defines some global objects 
+        -->
+    <script src="./wasm_exec.js"></script>
+    <script>
+        const wasmBrowserInstantiate = async (wasmModuleUrl, importObject) => {
+            let response;
+
+            // Check if the browser supports streaming instantiation
+            if (WebAssembly.instantiateStreaming) {
+                console.log('Using the new streaming instantiation');
+                // Fetch the module, and instantiate it as it is downloading
+                response = await WebAssembly.instantiateStreaming(
+                    fetch(wasmModuleUrl),
+                    importObject
+                );
+            } else {
+                // Fallback to using fetch to download the entire module
+                // And then instantiate the module
+                console.log('Using the older instantiation');
+                const fetchAndInstantiateTask = async () => {
+                    const wasmArrayBuffer = await fetch(wasmModuleUrl).then(response =>
+                        response.arrayBuffer()
+                    );
+                    return WebAssembly.instantiate(wasmArrayBuffer, importObject);
+                };
+
+                response = await fetchAndInstantiateTask();
+            }
+
+            return response;
+        };
+
+        // Define the Go import object
+        const go = new Go();
+        const importObject = go.importObject;
+        const wasmModuleUrl = './calc.wasm';
+        let wasmModule;
+
+
+
+        // Allow the wasm_exec go instance, bootstrap and execute our wasm module
+        (async () => {
+            // Instantiate our wasm module
+            wasmModule = await wasmBrowserInstantiate(wasmModuleUrl, importObject);
+
+            // Check
+            console.log("Quick check...");
+
+            // Call the add function from the wasm module
+            const a = 10;
+            const b = 20;
+            const result = wasmModule.instance.exports.add(a, b);
+            console.log(`${a} + ${b} = ${result}`);
+
+
+            // Call the subtract function from the wasm module
+            const x = 100;
+            const y = 50;
+            const result2 = wasmModule.instance.exports.subtract(x, y);
+            console.log(`${x} - ${y} = ${result2}`);
+
+            // Call the multiply function from the wasm module
+            const m = 5;
+            const n = 10;
+            const result3 = wasmModule.instance.exports.multiply(m, n);
+            console.log(`${m} * ${n} = ${result3}`);
+        })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,10 @@
+version: '3'
+
+tasks:
+    wasm:
+        cmds:
+            - tinygo build -o calc.wasm -target wasm ./main.go
+
+    wasm-csv:
+        cmds:
+            - tinygo build -o csv2json.wasm -target wasm -no-debug -gc=leaking ./main.go
